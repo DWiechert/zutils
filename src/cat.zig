@@ -1,7 +1,17 @@
 const std = @import("std");
 
 pub fn main() void {
-    std.debug.print("Hello, {s} from cat!\n", .{"World"});
+    const allocator = std.heap.page_allocator;
+
+    var argsIterator = try std.process.argsWithAllocator(allocator);
+    defer argsIterator.deinit();
+
+    // Skip executable
+    _ = argsIterator.next();
+
+    while (argsIterator.next()) |entry| {
+        std.debug.print("\t\t{s}\n", .{entry});
+    }
 }
 
 test "always succeeds" {
