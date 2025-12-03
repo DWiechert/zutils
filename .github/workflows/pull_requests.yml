@@ -1,15 +1,12 @@
-name: Main CI
-on:
-  push:
-    branches:
-      - main
+name: Pull Requests CI
+on: [pull_request]
 jobs:
   run_tests:
     runs-on: ubuntu-latest
-    name: Build
+    name: Build and Test
     steps:
       - uses: actions/checkout@v5
       - uses: mlugg/setup-zig@v2
         with:
           version: 0.15.1
-      - run: zig build --summary all
+      - run: zig build test --summary all
