@@ -19,11 +19,6 @@ Run individual tests:
 zig test src/cat.zig
 ```
 
-Build documentation:
-```
-
-```
-
 ## cat
 
 Outputs the contents of a file to stdout.
@@ -31,4 +26,9 @@ Outputs the contents of a file to stdout.
 Usage:
 ```
 ./zig-out/bin/cat <file 1> <file 2>
+```
+
+Documentation:
+```
+zig build-lib src/cat.zig -femit-docs
 ```
