@@ -1,0 +1,15 @@
+name: Main CI
+on:
+  push:
+    branches:
+      - main
+jobs:
+  run_tests:
+    runs-on: ubuntu-latest
+    name: Build
+    steps:
+      - uses: actions/checkout@v5
+      - uses: mlugg/setup-zig@v2
+        with:
+          version: 0.15.1
+      - run: zig build --summary all
