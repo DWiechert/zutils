@@ -1,0 +1,10 @@
+name: zutis Tests
+on: [push]
+jobs:
+  Run Tests:
+    runs-on: ubuntu-latest
+    name: Build and Test
+    steps:
+      - uses: actions/checkout@v5
+      - uses: https://codeberg.org/mlugg/setup-zig@v2
+      - run: zig build test --summary all
