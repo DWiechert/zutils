@@ -1,6 +1,7 @@
 # zutils
 
-Zig re-write of uutils.
+Zig re-write of coreutils:
+- https://en.wikipedia.org/wiki/GNU_Core_Utilities
 
 ## Building
 
