@@ -33,3 +33,12 @@ Documentation:
 ```
 zig build-lib src/cat.zig -femit-docs
 ```
+
+## md5sum
+
+Outputs the MD5 hash of a file to stdout.
+
+Usage:
+```
+./zig-out/bin/md5sum <file 1> <file 2>
+```
