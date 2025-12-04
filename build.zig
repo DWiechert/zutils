@@ -21,6 +21,11 @@ pub fn build(b: *std.Build) void {
     // target and optimize options) will be listed when running `zig build --help`
     // in this directory.
 
+    // A top level step for running all tests. dependOn can be called multiple
+    // times and since the two run steps do not depend on one another, this will
+    // make the two of them run in parallel.
+    const test_step = b.step("test", "Run tests");
+
     // Here we define an executable. An executable needs to have a root module
     // which needs to expose a `main` function. While we could add a main function
     // to the module defined above, it's sometimes preferable to split business
@@ -57,12 +62,23 @@ pub fn build(b: *std.Build) void {
         .root_module = cat.root_module,
     });
     const run_cat_tests = b.addRunArtifact(cat_tests);
-
-    // A top level step for running all tests. dependOn can be called multiple
-    // times and since the two run steps do not depend on one another, this will
-    // make the two of them run in parallel.
-    const test_step = b.step("test", "Run tests");
     test_step.dependOn(&run_cat_tests.step);
+
+    // md5sum
+    const md5sum = b.addExecutable(.{
+        .name = "md5sum",
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("src/md5sum.zig"),
+                                      .target = target,
+                                      .optimize = optimize,
+        })
+    });
+    b.installArtifact(md5sum);
+    const md5sum_tests = b.addTest(.{
+        .root_module = md5sum.root_module,
+    });
+    const run_md5sum_tests = b.addRunArtifact(md5sum_tests);
+    test_step.dependOn(&run_md5sum_tests.step);
 
     // Just like flags, top level steps are also listed in the `--help` menu.
     //
