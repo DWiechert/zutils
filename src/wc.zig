@@ -85,3 +85,10 @@ test "wc counts test file" {
     try std.testing.expectEqual(4, fileCounts.words);
     try std.testing.expectEqual(14, fileCounts.bytes);
 }
+
+test "wc empty file" {
+    const fileCounts = try wcFile("test_files/wc/empty.txt");
+    try std.testing.expectEqual(0, fileCounts.lines);
+    try std.testing.expectEqual(0, fileCounts.words);
+    try std.testing.expectEqual(0, fileCounts.bytes);
+}
