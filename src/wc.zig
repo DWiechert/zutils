@@ -78,3 +78,10 @@ pub fn main() !void {
 
     try stdout.flush();
 }
+
+test "wc counts test file" {
+    const fileCounts = try wcFile("test_files/wc/input.txt");
+    try std.testing.expectEqual(2, fileCounts.lines);
+    try std.testing.expectEqual(4, fileCounts.words);
+    try std.testing.expectEqual(14, fileCounts.bytes);
+}

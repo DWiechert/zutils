@@ -90,7 +90,11 @@ pub fn build(b: *std.Build) void {
         })
     });
     b.installArtifact(wc);
-    // TODO: Tests for wc
+    const wc_tests = b.addTest(.{
+        .root_module = wc.root_module,
+    });
+    const run_wc_tests = b.addRunArtifact(wc_tests);
+    test_step.dependOn(&run_wc_tests.step);
 
     // Just like flags, top level steps are also listed in the `--help` menu.
     //

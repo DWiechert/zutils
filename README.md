@@ -42,3 +42,17 @@ Usage:
 ```
 ./zig-out/bin/md5sum <file 1> <file 2>
 ```
+
+## wc
+
+Counts the number of lines, words, and bytes in a file.
+
+Usage:
+```
+./zig-out/bin/wc <file 1> <file 2>
+```
+
+Documentation:
+```
+zig build-lib src/wc.zig -femit-docs
+```
