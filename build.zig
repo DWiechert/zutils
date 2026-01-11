@@ -80,6 +80,22 @@ pub fn build(b: *std.Build) void {
     const run_md5sum_tests = b.addRunArtifact(md5sum_tests);
     test_step.dependOn(&run_md5sum_tests.step);
 
+    // wc
+    const wc = b.addExecutable(.{
+        .name = "wc",
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("src/wc.zig"),
+                                         .target = target,
+                                         .optimize = optimize,
+        })
+    });
+    b.installArtifact(wc);
+    const wc_tests = b.addTest(.{
+        .root_module = wc.root_module,
+    });
+    const run_wc_tests = b.addRunArtifact(wc_tests);
+    test_step.dependOn(&run_wc_tests.step);
+
     // Just like flags, top level steps are also listed in the `--help` menu.
     //
     // The Zig build system is entirely implemented in userland, which means
