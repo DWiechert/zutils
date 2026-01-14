@@ -43,58 +43,34 @@ pub fn build(b: *std.Build) void {
     // If neither case applies to you, feel free to delete the declaration you
     // don't need and to put everything under a single module.
 
-    // cat
-    const cat = b.addExecutable(.{
-        .name = "cat",
-        .root_module = b.createModule(.{
-            .root_source_file = b.path("src/cat.zig"),
-                                      .target = target,
-                                      .optimize = optimize,
-        }),
-    });
-    // This declares intent for the executable to be installed into the
-    // install prefix when running `zig build` (i.e. when executing the default
-    // step). By default the install prefix is `zig-out/` but can be overridden
-    // by passing `--prefix` or `-p`.
-    b.installArtifact(cat);
 
-    const cat_tests = b.addTest(.{
-        .root_module = cat.root_module,
-    });
-    const run_cat_tests = b.addRunArtifact(cat_tests);
-    test_step.dependOn(&run_cat_tests.step);
+    const commands = [_][] const u8{
+        "cat",
+        "md5sum",
+        "wc",
+    };
 
-    // md5sum
-    const md5sum = b.addExecutable(.{
-        .name = "md5sum",
-        .root_module = b.createModule(.{
-            .root_source_file = b.path("src/md5sum.zig"),
-                                      .target = target,
-                                      .optimize = optimize,
-        })
-    });
-    b.installArtifact(md5sum);
-    const md5sum_tests = b.addTest(.{
-        .root_module = md5sum.root_module,
-    });
-    const run_md5sum_tests = b.addRunArtifact(md5sum_tests);
-    test_step.dependOn(&run_md5sum_tests.step);
+    for (commands) |command| {
+        // This declares intent for the executable to be installed into the
+        // install prefix when running `zig build` (i.e. when executing the default
+        // step). By default the install prefix is `zig-out/` but can be overridden
+        // by passing `--prefix` or `-p`.
+        const exe = b.addExecutable(.{
+            .name = command,
+            .root_module = b.createModule(.{
+                .root_source_file = b.path(b.fmt("src/{s}.zig", .{command})),
+                                          .target = target,
+                                          .optimize = optimize,
+            }),
+        });
+        b.installArtifact(exe);
 
-    // wc
-    const wc = b.addExecutable(.{
-        .name = "wc",
-        .root_module = b.createModule(.{
-            .root_source_file = b.path("src/wc.zig"),
-                                         .target = target,
-                                         .optimize = optimize,
-        })
-    });
-    b.installArtifact(wc);
-    const wc_tests = b.addTest(.{
-        .root_module = wc.root_module,
-    });
-    const run_wc_tests = b.addRunArtifact(wc_tests);
-    test_step.dependOn(&run_wc_tests.step);
+        const exe_tests = b.addTest(.{
+            .root_module = exe.root_module,
+        });
+        const run_exe_tests = b.addRunArtifact(exe_tests);
+        test_step.dependOn(&run_exe_tests.step);
+    }
 
     // Just like flags, top level steps are also listed in the `--help` menu.
     //
