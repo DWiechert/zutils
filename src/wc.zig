@@ -8,6 +8,14 @@ const Counts = struct {
     lines: u32 = 0,
     words: u32 = 0,
     bytes: u64 = 0,
+    file: []const u8 = undefined,
+
+    pub fn format(
+        self: Counts,
+        writer: *std.io.Writer,
+    ) !void {
+        try writer.print("\t{d}\t{d}\t{d}\t{s}\n", .{self.lines, self.words, self.bytes, self.file});
+    }
 };
 
 /// Gathers counts for the provided file
@@ -25,7 +33,7 @@ pub fn wcFile(file_path: [] const u8) !Counts {
     var file_reader = file.reader(&buffer);
     const reader = &file_reader.interface;
 
-    var fileCounts: Counts = .{};
+    var fileCounts: Counts = .{.file = file_path};
 
     while (reader.takeDelimiterInclusive('\n')) |line| {
         fileCounts.lines += 1;
@@ -64,7 +72,7 @@ pub fn main() !void {
 
     while (argsIterator.next()) |entry| {
         const fileCounts = try wcFile(entry);
-        try stdout.print("\t{d}\t{d}\t{d}\t{s}\n", .{fileCounts.lines, fileCounts.words, fileCounts.bytes, entry});
+        try stdout.print("{f}", .{fileCounts});
 
         totalCounts.lines += fileCounts.lines;
         totalCounts.words += fileCounts.words;
