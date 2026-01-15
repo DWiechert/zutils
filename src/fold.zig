@@ -61,17 +61,16 @@ pub fn main() !void {
 }
 
 test "foldFile outputs text to 80 characters" {
-    // This import causes the tests in the `cat` file to run
-    // Not sure how to disable right now
-    const cat = @import("cat.zig");
-
     var output: std.ArrayList(u8) = .empty;
     defer output.deinit(std.testing.allocator);
     try foldFile(output.writer(std.testing.allocator), "test_files/fold/input.txt");
 
-    var expected: std.ArrayList(u8) = .empty;
-    defer expected.deinit(std.testing.allocator);
-    try cat.catFile(expected.writer(std.testing.allocator), "test_files/fold/output.txt");
+    const expected = try std.fs.cwd().readFileAlloc(
+        std.testing.allocator,
+        "test_files/fold/output.txt",
+        1024 * 1024
+    );
+    defer std.testing.allocator.free(expected);
 
-    try std.testing.expectEqualStrings(expected.items, output.items);
+    try std.testing.expectEqualStrings(expected, output.items);
 }
