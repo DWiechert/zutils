@@ -43,11 +43,11 @@ pub fn build(b: *std.Build) void {
     // If neither case applies to you, feel free to delete the declaration you
     // don't need and to put everything under a single module.
 
-
     const commands = [_][] const u8{
         "cat",
         "md5sum",
         "wc",
+        "fold",
     };
 
     for (commands) |command| {

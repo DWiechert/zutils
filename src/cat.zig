@@ -43,7 +43,6 @@ pub fn main() !void {
         try catFile(stdout, entry);
         try stdout.flush();
     }
-
 }
 
 test "catFile outputs test file" {

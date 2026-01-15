@@ -34,6 +34,20 @@ Documentation:
 zig build-lib src/cat.zig -femit-docs
 ```
 
+## fold
+
+Outputs the contents of a file to stdout with a maximum width of 80 characters per line.
+
+Usage:
+```
+./zig-out/bin/fold <file>
+```
+
+Documentation:
+```
+zig build-lib src/fold.zig -femit-docs
+```
+
 ## md5sum
 
 Outputs the MD5 hash of a file to stdout.
