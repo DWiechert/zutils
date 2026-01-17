@@ -6,6 +6,7 @@ const std = @import("std");
 /// Errors that can occur in the `od` command
 const Errors = error {
     InvalidArgument,
+    MissingFile,
 };
 
 /// Formats supported by the `od` command
@@ -105,14 +106,17 @@ pub fn main() !void {
     var stdout_writer = std.fs.File.stdout().writer(&stdout_buffer);
     const stdout = &stdout_writer.interface;
 
-    var file_path: [:0] const u8 = undefined;
-    // TODO: Parse flag as second argument
-    //var flag: [:0] const u8 = null;
-    while (argsIterator.next()) |entry| {
-        file_path = entry;
-    }
+    // First argument is file path
+    const file_path = argsIterator.next() orelse {
+        std.debug.print("Must provide a file path.\n", .{});
+        return Errors.MissingFile;
+    };
 
-    try odFile(stdout, file_path, Format.octal);
+    // Second argument is flag format, strip off the '-'
+    const format_arg = argsIterator.next();
+    const format = if (format_arg) |flag| try parseFormat(flag[1]) else Format.octal;
+
+    try odFile(stdout, file_path, format);
     try stdout.flush();
 }
 
