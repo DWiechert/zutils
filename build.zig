@@ -48,6 +48,7 @@ pub fn build(b: *std.Build) void {
         "md5sum",
         "wc",
         "fold",
+        "od",
     };
 
     for (commands) |command| {
