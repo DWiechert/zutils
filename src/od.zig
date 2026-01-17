@@ -3,15 +3,24 @@
 
 const std = @import("std");
 
+/// Errors that can occur in the `od` command
 const Errors = error {
     InvalidArgument,
 };
 
+/// Formats supported by the `od` command
 const Format = enum {
     octal,
     hex,
 };
 
+/// Parses the input format
+///
+/// Arguments:
+/// - `arg`: The argument to parse
+///
+/// Returns:
+/// The Format to output in
 pub fn parseFormat(arg: u8) !Format {
     return switch (arg) {
         'o' => Format.octal,
@@ -32,7 +41,13 @@ test "parseFormat error" {
     try std.testing.expectError(Errors.InvalidArgument, parseFormat('a'));
 }
 
-pub fn octalOutput(writer: anytype, file_path: []const u8, format: Format) !void {
+/// Writes the contents of `od` to a file
+///
+/// Arguments:
+/// - `writer`: Any writer interface
+/// - `file_path`: Path of the file to read
+/// - `format`: Format of the output
+pub fn odFile(writer: anytype, file_path: []const u8, format: Format) !void {
     var file = try std.fs.cwd().openFile(file_path, .{});
     defer file.close();
 
@@ -75,6 +90,8 @@ pub fn octalOutput(writer: anytype, file_path: []const u8, format: Format) !void
     try writer.print("{o:0>7}\n", .{offset});  // Print final offset
 }
 
+/// Main entry for the `od` command
+/// Prints the contents of a file with the supplied format
 pub fn main() !void {
     const allocator = std.heap.page_allocator;
 
@@ -89,12 +106,12 @@ pub fn main() !void {
     const stdout = &stdout_writer.interface;
 
     while (argsIterator.next()) |entry| {
-        try octalOutput(stdout, entry, Format.octal);
+        try odFile(stdout, entry, Format.octal);
         try stdout.flush();
     }
 }
 
-test "octalOutput" {
+test "odFile octal" {
     const expected = try std.fs.cwd().readFileAlloc(
         std.testing.allocator,
         "test_files/od/output_octal.txt",
@@ -104,7 +121,22 @@ test "octalOutput" {
 
     var output: std.ArrayList(u8) = .empty;
     defer output.deinit(std.testing.allocator);
-    try octalOutput(output.writer(std.testing.allocator), "test_files/od/input.txt", Format.octal);
+    try odFile(output.writer(std.testing.allocator), "test_files/od/input.txt", Format.octal);
+
+    try std.testing.expectEqualStrings(expected, output.items);
+}
+
+test "odFile hex" {
+    const expected = try std.fs.cwd().readFileAlloc(
+        std.testing.allocator,
+        "test_files/od/output_hex.txt",
+        1024 * 1024
+    );
+    defer std.testing.allocator.free(expected);
+
+    var output: std.ArrayList(u8) = .empty;
+    defer output.deinit(std.testing.allocator);
+    try odFile(output.writer(std.testing.allocator), "test_files/od/input.txt", Format.hex);
 
     try std.testing.expectEqualStrings(expected, output.items);
 }
