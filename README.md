@@ -57,6 +57,24 @@ Usage:
 ./zig-out/bin/md5sum <file 1> <file 2>
 ```
 
+## od
+
+Outputs the conts of a file in various formats.
+
+Usage:
+```
+./zig-out/bin/od <file> <flag>
+```
+
+Where `flag` is one of:
+* `` - (Empty) Octal formatting
+* `-x` - Hex formatting
+
+Documentation:
+```
+zig build-lib src/od.zig -femit-docs
+```
+
 ## wc
 
 Counts the number of lines, words, and bytes in a file.
