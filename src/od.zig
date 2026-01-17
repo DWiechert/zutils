@@ -14,6 +14,19 @@ const Format = enum {
     octal,
     hex,
     decimal,
+
+    // Format specifier: {type: >width}
+    //   type = o/x/d (octal/hex/decimal)
+    //   ' ' = pad with spaces (not zeros)
+    //   > = right-align
+    //   width = minimum character width
+    pub fn print(self: Format, writer: anytype, word: u16) !void {
+        switch (self) {
+            .octal => try writer.print(" {o:0>6}", .{word}),
+            .hex => try writer.print(" {x:0>4}", .{word}),
+            .decimal => try writer.print(" {d: >5}", .{word}),
+        }
+    }
 };
 
 /// Parses the input format
@@ -85,17 +98,7 @@ pub fn odFile(writer: anytype, file_path: []const u8, format: Format) !void {
         else
             @as(u16, word_buffer[0]);  // If only 1 byte left, treat as low byte
 
-        // Format specifier: {type: >width}
-        //   type = o/x/d (octal/hex/decimal)
-        //   ' ' = pad with spaces (not zeros)
-        //   > = right-align
-        //   width = minimum character width
-        switch (format) {
-            .octal => try writer.print(" {o:0>6}", .{word}),
-            .hex => try writer.print(" {x:0>4}", .{word}),
-            .decimal => try writer.print(" {d: >5}", .{word}),
-        }
-
+        try format.print(writer, word);
         offset += bytes_read;
     }
 
