@@ -91,7 +91,7 @@ pub fn odFile(writer: anytype, file_path: []const u8, format: Format) !void {
 }
 
 /// Main entry for the `od` command
-/// Prints the contents of a file with the supplied format
+/// Prints the contents of a file with the supplied formatg
 pub fn main() !void {
     const allocator = std.heap.page_allocator;
 
@@ -105,10 +105,15 @@ pub fn main() !void {
     var stdout_writer = std.fs.File.stdout().writer(&stdout_buffer);
     const stdout = &stdout_writer.interface;
 
+    var file_path: [:0] const u8 = undefined;
+    // TODO: Parse flag as second argument
+    //var flag: [:0] const u8 = null;
     while (argsIterator.next()) |entry| {
-        try odFile(stdout, entry, Format.octal);
-        try stdout.flush();
+        file_path = entry;
     }
+
+    try odFile(stdout, file_path, Format.octal);
+    try stdout.flush();
 }
 
 test "odFile octal" {
