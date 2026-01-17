@@ -61,16 +61,16 @@ pub fn main() !void {
 }
 
 test "foldFile outputs text to 80 characters" {
-    var output: std.ArrayList(u8) = .empty;
-    defer output.deinit(std.testing.allocator);
-    try foldFile(output.writer(std.testing.allocator), "test_files/fold/input.txt");
-
     const expected = try std.fs.cwd().readFileAlloc(
         std.testing.allocator,
         "test_files/fold/output.txt",
         1024 * 1024
     );
     defer std.testing.allocator.free(expected);
+
+    var output: std.ArrayList(u8) = .empty;
+    defer output.deinit(std.testing.allocator);
+    try foldFile(output.writer(std.testing.allocator), "test_files/fold/input.txt");
 
     try std.testing.expectEqualStrings(expected, output.items);
 }
