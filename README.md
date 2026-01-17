@@ -70,6 +70,7 @@ Where `flag` is one of:
 * `` - (Empty) Octal formatting
 * `-o` - Octal formatting
 * `-x` - Hex formatting
+* `-d` - Decimal formatting
 
 Documentation:
 ```

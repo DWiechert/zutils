@@ -13,6 +13,7 @@ const Errors = error {
 const Format = enum {
     octal,
     hex,
+    decimal,
 };
 
 /// Parses the input format
@@ -26,6 +27,7 @@ pub fn parseFormat(arg: u8) !Format {
     return switch (arg) {
         'o' => Format.octal,
         'h' => Format.hex,
+        'd' => Format.decimal,
         else => Errors.InvalidArgument,
     };
 }
@@ -36,6 +38,10 @@ test "parseFormat octal" {
 
 test "parseFormat hex" {
     try std.testing.expectEqual(Format.hex, parseFormat('h'));
+}
+
+test "parseFormat decimal" {
+    try std.testing.expectEqual(Format.decimal, parseFormat('d'));
 }
 
 test "parseFormat error" {
@@ -79,9 +85,15 @@ pub fn odFile(writer: anytype, file_path: []const u8, format: Format) !void {
         else
             @as(u16, word_buffer[0]);  // If only 1 byte left, treat as low byte
 
+        // Format specifier: {type: >width}
+        //   type = o/x/d (octal/hex/decimal)
+        //   ' ' = pad with spaces (not zeros)
+        //   > = right-align
+        //   width = minimum character width
         switch (format) {
             .octal => try writer.print(" {o:0>6}", .{word}),
             .hex => try writer.print(" {x:0>4}", .{word}),
+            .decimal => try writer.print(" {d: >5}", .{word}),
         }
 
         offset += bytes_read;
@@ -146,6 +158,21 @@ test "odFile hex" {
     var output: std.ArrayList(u8) = .empty;
     defer output.deinit(std.testing.allocator);
     try odFile(output.writer(std.testing.allocator), "test_files/od/input.txt", Format.hex);
+
+    try std.testing.expectEqualStrings(expected, output.items);
+}
+
+test "odFile decimal" {
+    const expected = try std.fs.cwd().readFileAlloc(
+        std.testing.allocator,
+        "test_files/od/output_decimal.txt",
+        1024 * 1024
+    );
+    defer std.testing.allocator.free(expected);
+
+    var output: std.ArrayList(u8) = .empty;
+    defer output.deinit(std.testing.allocator);
+    try odFile(output.writer(std.testing.allocator), "test_files/od/input.txt", Format.decimal);
 
     try std.testing.expectEqualStrings(expected, output.items);
 }
