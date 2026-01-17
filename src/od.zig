@@ -3,7 +3,36 @@
 
 const std = @import("std");
 
-pub fn octalOutput(writer: anytype, file_path: []const u8) !void {
+const Errors = error {
+    InvalidArgument,
+};
+
+const Format = enum {
+    octal,
+    hex,
+};
+
+pub fn parseFormat(arg: u8) !Format {
+    return switch (arg) {
+        'o' => Format.octal,
+        'h' => Format.hex,
+        else => Errors.InvalidArgument,
+    };
+}
+
+test "parseFormat octal" {
+    try std.testing.expectEqual(Format.octal, parseFormat('o'));
+}
+
+test "parseFormat hex" {
+    try std.testing.expectEqual(Format.hex, parseFormat('h'));
+}
+
+test "parseFormat error" {
+    try std.testing.expectError(Errors.InvalidArgument, parseFormat('a'));
+}
+
+pub fn octalOutput(writer: anytype, file_path: []const u8, format: Format) !void {
     var file = try std.fs.cwd().openFile(file_path, .{});
     defer file.close();
 
@@ -21,7 +50,7 @@ pub fn octalOutput(writer: anytype, file_path: []const u8) !void {
                 try writer.writeByte('\n');
             }
 
-            try writer.print("{o:0>7} ", .{offset});
+            try writer.print("{o:0>7}", .{offset});
         }
 
         // Combine bytes into a 16-bit word using little-endian byte order
@@ -34,7 +63,10 @@ pub fn octalOutput(writer: anytype, file_path: []const u8) !void {
         else
             @as(u16, word_buffer[0]);  // If only 1 byte left, treat as low byte
 
-        try writer.print("{o:0>6} ", .{word});
+        switch (format) {
+            .octal => try writer.print(" {o:0>6}", .{word}),
+            .hex => try writer.print(" {x:0>4}", .{word}),
+        }
 
         offset += bytes_read;
     }
@@ -57,7 +89,7 @@ pub fn main() !void {
     const stdout = &stdout_writer.interface;
 
     while (argsIterator.next()) |entry| {
-        try octalOutput(stdout, entry);
+        try octalOutput(stdout, entry, Format.octal);
         try stdout.flush();
     }
 }
@@ -72,7 +104,7 @@ test "octalOutput" {
 
     var output: std.ArrayList(u8) = .empty;
     defer output.deinit(std.testing.allocator);
-    try octalOutput(output.writer(std.testing.allocator), "test_files/od/input.txt");
+    try octalOutput(output.writer(std.testing.allocator), "test_files/od/input.txt", Format.octal);
 
     try std.testing.expectEqualStrings(expected, output.items);
 }
