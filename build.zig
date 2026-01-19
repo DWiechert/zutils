@@ -24,6 +24,7 @@ pub fn build(b: *std.Build) void {
     // A top level step for running all tests. dependOn can be called multiple
     // times and since the two run steps do not depend on one another, this will
     // make the two of them run in parallel.
+    // Step can be run via `zig build test`
     const test_step = b.step("test", "Run tests");
 
     // Here we define an executable. An executable needs to have a root module
@@ -43,6 +44,7 @@ pub fn build(b: *std.Build) void {
     // If neither case applies to you, feel free to delete the declaration you
     // don't need and to put everything under a single module.
 
+    // zutils commands to build executables for
     const commands = [_][] const u8{
         "cat",
         "md5sum",
@@ -51,6 +53,7 @@ pub fn build(b: *std.Build) void {
         "od",
     };
 
+    // Build executables
     for (commands) |command| {
         // This declares intent for the executable to be installed into the
         // install prefix when running `zig build` (i.e. when executing the default
@@ -72,6 +75,28 @@ pub fn build(b: *std.Build) void {
         const run_exe_tests = b.addRunArtifact(exe_tests);
         test_step.dependOn(&run_exe_tests.step);
     }
+
+    // Build library functions
+    const lib = b.addLibrary(.{
+        .name = "zutils-lib",
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("src/lib.zig"),
+                                      .target = target,
+                                      .optimize = optimize,
+        }),
+    });
+    b.installArtifact(lib);
+
+    // Build library via `zig build lib`
+    const lib_step = b.step("lib", "Build the library");
+    lib_step.dependOn(&lib.step);
+
+    // Tests for library
+    const lib_tests = b.addTest(.{
+        .root_module = lib.root_module,
+    });
+    const run_lib_tests = b.addRunArtifact(lib_tests);
+    test_step.dependOn(&run_lib_tests.step);
 
     // Just like flags, top level steps are also listed in the `--help` menu.
     //
