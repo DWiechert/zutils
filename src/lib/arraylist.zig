@@ -29,7 +29,7 @@ pub fn ArrayList(comptime T: type) type {
 
             const new_elements = self.allocator.alloc(T, cur_length + 1) catch |err| {
                 //std.debug.print("Error allocating new_elements: {s}", .{err});
-                std.debug.print("Error allocating new_elements: {}", .{err});
+                std.debug.print("Error allocating new_elements: {}\n", .{err});
                 return false;
             };
 
