@@ -27,9 +27,9 @@ pub fn ArrayList(comptime T: type) type {
             // `self` needs to be a pointer because we are modifying the structure
             const cur_length = self.length();
 
-            const new_elements = self.allocator.alloc(T, cur_length + 1) catch {
+            const new_elements = self.allocator.alloc(T, cur_length + 1) catch |err| {
                 //std.debug.print("Error allocating new_elements: {s}", .{err});
-                std.debug.print("Error allocating new_elements", .{});
+                std.debug.print("Error allocating new_elements: {}", .{err});
                 return false;
             };
 
