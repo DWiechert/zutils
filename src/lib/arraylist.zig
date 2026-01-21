@@ -25,6 +25,8 @@ pub fn ArrayList(comptime T: type) type {
 
         pub fn deinit(self: Self) void {
             // `self` can be an instance since there are no modifications
+            // Need to free the entire allocated capacity, not just
+            // the current slice's length
             if (self.capacity > 0) {
                 self.allocator.free(self.elements.ptr[0..self.capacity]);
             }
@@ -78,12 +80,21 @@ pub fn ArrayList(comptime T: type) type {
             self.capacity = new_capacity;
         }
 
-        pub fn remove(self: *Self) T {
+        pub fn remove(self: *Self, index: usize) !T {
             // `self` needs to be a pointer because we are modifying the structure
-            return if (len() == 0) null
-                else self.elements[0];
-            // TODO: Resize array
-            //return error.NotImplemented;
+            const curr_length = self.len();
+            if (index >= curr_length) return error.IndexOutOfBounds;
+
+            const element = self.elements[index];
+
+            // Shift everything after index down
+            if (index < curr_length - 1) {
+                @memcpy(self.elements[index..curr_length - 1], self.elements[index + 1..curr_length]);
+            }
+
+            self.elements = self.elements.ptr[0..curr_length - 1];
+
+            return element;
         }
 
         pub fn len(self: Self) usize {
@@ -179,6 +190,44 @@ test "add u8 with options" {
     try list.add('l');
     try list.add('d');
     try std.testing.expectEqual(@as(usize, 11), list.len());
+}
+
+test "remove error" {
+    var list = ArrayList(i32).init(std.testing.allocator, .{});
+    defer list.deinit();
+
+    try std.testing.expectEqual(@as(usize, 0), list.len());
+    try list.add(1);
+    try list.add(2);
+    try std.testing.expectEqual(@as(usize, 2), list.len());
+    try std.testing.expectError(error.IndexOutOfBounds, list.remove(3));
+    try std.testing.expectEqual(@as(usize, 2), list.len());
+}
+
+test "remove first" {
+    var list = ArrayList(i32).init(std.testing.allocator, .{});
+    defer list.deinit();
+
+    try std.testing.expectEqual(@as(usize, 0), list.len());
+    try list.add(1);
+    try list.add(2);
+    try std.testing.expectEqual(@as(usize, 2), list.len());
+    const element = try list.remove(0);
+    try std.testing.expectEqual(1, element);
+    try std.testing.expectEqual(@as(usize, 1), list.len());
+}
+
+test "remove last" {
+    var list = ArrayList(i32).init(std.testing.allocator, .{});
+    defer list.deinit();
+
+    try std.testing.expectEqual(@as(usize, 0), list.len());
+    try list.add(1);
+    try list.add(2);
+    try std.testing.expectEqual(@as(usize, 2), list.len());
+    const element = try list.remove(1);
+    try std.testing.expectEqual(2, element);
+    try std.testing.expectEqual(@as(usize, 1), list.len());
 }
 
 test "iterator" {
