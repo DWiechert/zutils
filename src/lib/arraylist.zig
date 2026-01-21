@@ -92,6 +92,8 @@ pub fn ArrayList(comptime T: type) type {
                 @memcpy(self.elements[index..curr_length - 1], self.elements[index + 1..curr_length]);
             }
 
+            // Shrink the slice of the allocated array to be one smaller
+            // This just shows a view of the total allocated memory
             self.elements = self.elements.ptr[0..curr_length - 1];
 
             return element;
@@ -102,16 +104,26 @@ pub fn ArrayList(comptime T: type) type {
             return self.elements.len;
         }
 
-        pub fn iterator(self: *const Self) Iterator {
+        fn copy(self: Self) ![]T {
+            const new_copy = self.allocator.alloc(T, self.elements.len) catch |err| {
+                std.debug.print("Error copying new_elements: {}\n", .{err});
+                return err;
+            };
+
+            @memcpy(new_copy, self.elements);
+            return new_copy;
+        }
+
+        pub fn iterator(self: *const Self) !Iterator {
             return Iterator {
-                .list = self,
+                .list = try self.copy(),
                 .index = 0,
             };
         }
 
         const Iterator = struct {
             // This `Self` refers to the outer `ArrayList` class
-            list: *const Self,
+            list: [] T,
             index: usize,
 
             // Cannot use `Self` here because we need to modify
@@ -119,7 +131,7 @@ pub fn ArrayList(comptime T: type) type {
             pub fn next(self: *Iterator) ?T {
                 const index = self.index;
                 self.index += 1;
-                return if (index < self.list.len()) self.list.elements[index]
+                return if (index < self.list.len) self.list.ptr[index]
                 else null;
             }
 
@@ -238,7 +250,7 @@ test "iterator" {
     try list.add(2);
 
     // Iterate once
-    var iter = list.iterator();
+    var iter = try list.iterator();
     try std.testing.expectEqual(1, iter.next().?);
     try std.testing.expectEqual(2, iter.next().?);
     try std.testing.expectEqual(null, iter.next());
@@ -249,5 +261,43 @@ test "iterator" {
     // Iterate again
     try std.testing.expectEqual(1, iter.next().?);
     try std.testing.expectEqual(2, iter.next().?);
+    try std.testing.expectEqual(null, iter.next());
+}
+
+test "iterator remove" {
+    var list = ArrayList(i32).init(std.testing.allocator, .{});
+    defer list.deinit();
+
+    try list.add(1);
+    try list.add(2);
+    try list.add(3);
+    try std.testing.expectEqual(@as(usize, 3), list.len());
+
+    // Iterate once
+    var iter = try list.iterator();
+    try std.testing.expectEqual(1, iter.next().?);
+    try std.testing.expectEqual(2, iter.next().?);
+    try std.testing.expectEqual(3, iter.next().?);
+    try std.testing.expectEqual(null, iter.next());
+
+    // Remove element at index 1 - value 2
+    const element = try list.remove(1);
+    try std.testing.expectEqual(2, element);
+    // List now contains [1, 3]
+    try std.testing.expectEqual(@as(usize, 2), list.len());
+
+    // Get new iterator
+    var iter2 = try list.iterator();
+
+    // Iterate again
+    try std.testing.expectEqual(1, iter2.next().?);
+    try std.testing.expectEqual(3, iter2.next().?);
+    try std.testing.expectEqual(null, iter2.next());
+
+    // Check iterator 1
+    iter.reset();
+    try std.testing.expectEqual(1, iter.next().?);
+    try std.testing.expectEqual(2, iter.next().?);
+    try std.testing.expectEqual(3, iter.next().?);
     try std.testing.expectEqual(null, iter.next());
 }
