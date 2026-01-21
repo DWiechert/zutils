@@ -172,7 +172,13 @@ test "add u8 with options" {
     try list.add('l');
     try list.add('l');
     try list.add('o');
-    try std.testing.expectEqual(@as(usize, 5), list.len());
+    try list.add(' ');
+    try list.add('w');
+    try list.add('o');
+    try list.add('r');
+    try list.add('l');
+    try list.add('d');
+    try std.testing.expectEqual(@as(usize, 11), list.len());
 }
 
 test "iterator" {
