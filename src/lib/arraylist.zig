@@ -104,26 +104,16 @@ pub fn ArrayList(comptime T: type) type {
             return self.elements.len;
         }
 
-        fn copy(self: Self) ![]T {
-            const new_copy = self.allocator.alloc(T, self.elements.len) catch |err| {
-                std.debug.print("Error copying new_elements: {}\n", .{err});
-                return err;
-            };
-
-            @memcpy(new_copy, self.elements);
-            return new_copy;
-        }
-
-        pub fn iterator(self: *const Self) !Iterator {
+        pub fn iterator(self: *const Self) Iterator {
             return Iterator {
-                .list = try self.copy(),
+                .list = self,
                 .index = 0,
             };
         }
 
         const Iterator = struct {
             // This `Self` refers to the outer `ArrayList` class
-            list: [] T,
+            list: *const Self,
             index: usize,
 
             // Cannot use `Self` here because we need to modify
@@ -131,7 +121,7 @@ pub fn ArrayList(comptime T: type) type {
             pub fn next(self: *Iterator) ?T {
                 const index = self.index;
                 self.index += 1;
-                return if (index < self.list.len) self.list.ptr[index]
+                return if (index < self.list.len()) self.list.elements[index]
                 else null;
             }
 
@@ -250,7 +240,7 @@ test "iterator" {
     try list.add(2);
 
     // Iterate once
-    var iter = try list.iterator();
+    var iter = list.iterator();
     try std.testing.expectEqual(1, iter.next().?);
     try std.testing.expectEqual(2, iter.next().?);
     try std.testing.expectEqual(null, iter.next());
@@ -274,7 +264,7 @@ test "iterator remove" {
     try std.testing.expectEqual(@as(usize, 3), list.len());
 
     // Iterate once
-    var iter = try list.iterator();
+    var iter = list.iterator();
     try std.testing.expectEqual(1, iter.next().?);
     try std.testing.expectEqual(2, iter.next().?);
     try std.testing.expectEqual(3, iter.next().?);
@@ -287,7 +277,7 @@ test "iterator remove" {
     try std.testing.expectEqual(@as(usize, 2), list.len());
 
     // Get new iterator
-    var iter2 = try list.iterator();
+    var iter2 = list.iterator();
 
     // Iterate again
     try std.testing.expectEqual(1, iter2.next().?);
@@ -297,7 +287,6 @@ test "iterator remove" {
     // Check iterator 1
     iter.reset();
     try std.testing.expectEqual(1, iter.next().?);
-    try std.testing.expectEqual(2, iter.next().?);
     try std.testing.expectEqual(3, iter.next().?);
     try std.testing.expectEqual(null, iter.next());
 }
