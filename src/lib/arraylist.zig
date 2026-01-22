@@ -105,6 +105,13 @@ pub fn ArrayList(comptime T: type) type {
             return element;
         }
 
+        pub fn get(self: *const Self, index: usize) !T {
+            const curr_length = self.len();
+            if (index >= curr_length) return error.IndexOutOfBounds;
+
+            return self.elements[index];
+        }
+
         pub fn len(self: Self) usize {
             // `self` can be an instance since there are no modifications
             return self.elements.len;
@@ -269,6 +276,17 @@ test "remove last" {
     const element = try list.remove(1);
     try std.testing.expectEqual(2, element);
     try std.testing.expectEqual(@as(usize, 1), list.len());
+}
+
+test "get" {
+    var list = ArrayList(i32).init(std.testing.allocator, .{});
+    defer list.deinit();
+
+    try list.add(1);
+    try list.add(2);
+    try std.testing.expectEqual(1, list.get(0));
+    try std.testing.expectEqual(2, list.get(1));
+    try std.testing.expectError(error.IndexOutOfBounds, list.get(2));
 }
 
 test "contains i32" {
