@@ -45,6 +45,28 @@ pub fn HashSet(comptime T: type) type {
         pub fn len(self: Self) usize {
             return self.size;
         }
+
+        pub fn iterator(self: *const Self) Iterator {
+            return Iterator {
+                .set = self,
+                .buckets_index = 0,
+                .bucket_index = 0,
+            };
+        }
+
+        const Iterator = struct {
+            set: *const Self,
+            buckets_index: usize,
+            bucket_index: usize,
+
+            pub fn next(self: *Iterator) ?T {
+                // TODO: Iterator over buckets and in each bucket
+                // Need to keep track for the next index to pull
+                // Need to have special logic for index increments
+                std.debug.print("Self: {}", .{self});
+                return null;
+            }
+        };
     };
 }
 
