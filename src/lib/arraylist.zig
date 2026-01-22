@@ -110,6 +110,16 @@ pub fn ArrayList(comptime T: type) type {
             return self.elements.len;
         }
 
+        pub fn contains(self: Self, element: T) bool {
+            var iter = self.iterator();
+            while (iter.next()) |i| {
+                if (std.meta.eql(element, i)) {
+                    return true;
+                }
+            }
+            return false;
+        }
+
         /// Returns an iterator over the list.
         /// Note: Modifying the list while iterating (add, remove)
         /// results in undefined behavior.
@@ -259,6 +269,33 @@ test "remove last" {
     const element = try list.remove(1);
     try std.testing.expectEqual(2, element);
     try std.testing.expectEqual(@as(usize, 1), list.len());
+}
+
+test "contains i32" {
+    var list = ArrayList(i32).init(std.testing.allocator, .{});
+    defer list.deinit();
+
+    try list.add(1);
+    try list.add(2);
+
+    try std.testing.expectEqual(true, list.contains(1));
+    try std.testing.expectEqual(true, list.contains(2));
+    try std.testing.expectEqual(false, list.contains(3));
+}
+
+test "contains u8" {
+    var list = ArrayList(u8).init(std.testing.allocator, .{});
+    defer list.deinit();
+
+    try list.add('h');
+    try list.add('e');
+    try list.add('l');
+    try list.add('l');
+    try list.add('o');
+
+    try std.testing.expectEqual(true, list.contains('h'));
+    try std.testing.expectEqual(true, list.contains('l'));
+    try std.testing.expectEqual(false, list.contains('w'));
 }
 
 test "iterator" {
