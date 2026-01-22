@@ -104,6 +104,9 @@ pub fn ArrayList(comptime T: type) type {
             return self.elements.len;
         }
 
+        /// Returns an iterator over the list.
+        /// Note: Modifying the list while iterating (add, remove)
+        /// results in undefined behavior.
         pub fn iterator(self: *const Self) Iterator {
             return Iterator {
                 .list = self,
@@ -113,6 +116,8 @@ pub fn ArrayList(comptime T: type) type {
 
         const Iterator = struct {
             // This `Self` refers to the outer `ArrayList` class
+            // This is a pointer to the list so any modifications
+            // (add, remove) are reflected when iterating
             list: *const Self,
             index: usize,
 
