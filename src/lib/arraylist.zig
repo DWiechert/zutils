@@ -66,9 +66,7 @@ pub fn ArrayList(comptime T: type) type {
         fn grow(self: *Self) !void {
             // Derive the new capacity of the internal array
             // Multiple the current capacity by the scale factor and take the integer ceiling
-            std.debug.print("curr_capacity: {d}\t", .{self.capacity});
             const new_capacity = self.calculateNewCapacity();
-            std.debug.print("new_capacity: {d}\n", .{new_capacity});
 
             // Allocating an internal array of `capacity` size
             // [_][_][_][_][_][_][_][_][_][_]  ← 10 items allocated (capacity = 10)

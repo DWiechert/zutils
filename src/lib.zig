@@ -2,6 +2,7 @@
 //! Data structures and algorithms for learning Zig
 
 pub const ArrayList = @import("lib/arraylist.zig").ArrayList;
+pub const HashSet = @import("lib/hashset.zig").HashSet;
 
 // This runs all tests from imported files
 // when running `zig build test --summary all`
