@@ -21,28 +21,14 @@ pub fn build(b: *std.Build) void {
     // target and optimize options) will be listed when running `zig build --help`
     // in this directory.
 
-    // A top level step for running all tests. dependOn can be called multiple
-    // times and since the two run steps do not depend on one another, this will
-    // make the two of them run in parallel.
+    // A top level step for running all tests.
+    // Step can be run via `zig build test`
     const test_step = b.step("test", "Run tests");
 
     // Here we define an executable. An executable needs to have a root module
-    // which needs to expose a `main` function. While we could add a main function
-    // to the module defined above, it's sometimes preferable to split business
-    // business logic and the CLI into two separate modules.
-    //
-    // If your goal is to create a Zig library for others to use, consider if
-    // it might benefit from also exposing a CLI tool. A parser library for a
-    // data serialization format could also bundle a CLI syntax checker, for example.
-    //
-    // If instead your goal is to create an executable, consider if users might
-    // be interested in also being able to embed the core functionality of your
-    // program in their own executable in order to avoid the overhead involved in
-    // subprocessing your CLI tool.
-    //
-    // If neither case applies to you, feel free to delete the declaration you
-    // don't need and to put everything under a single module.
+    // which needs to expose a `main` function.
 
+    // zutils commands to build executables for
     const commands = [_][] const u8{
         "cat",
         "md5sum",
@@ -51,6 +37,7 @@ pub fn build(b: *std.Build) void {
         "od",
     };
 
+    // Build executables
     for (commands) |command| {
         // This declares intent for the executable to be installed into the
         // install prefix when running `zig build` (i.e. when executing the default
@@ -73,15 +60,25 @@ pub fn build(b: *std.Build) void {
         test_step.dependOn(&run_exe_tests.step);
     }
 
-    // Just like flags, top level steps are also listed in the `--help` menu.
-    //
-    // The Zig build system is entirely implemented in userland, which means
-    // that it cannot hook into private compiler APIs. All compilation work
-    // orchestrated by the build system will result in other Zig compiler
-    // subcommands being invoked with the right flags defined. You can observe
-    // these invocations when one fails (or you pass a flag to increase
-    // verbosity) to validate assumptions and diagnose problems.
-    //
-    // Lastly, the Zig build system is relatively simple and self-contained,
-    // and reading its source code will allow you to master it.
+    // Build library functions
+    const lib = b.addLibrary(.{
+        .name = "zutils-lib",
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("src/lib.zig"),
+                                      .target = target,
+                                      .optimize = optimize,
+        }),
+    });
+    b.installArtifact(lib);
+
+    // Build library via `zig build lib` so no need to build executables always
+    const lib_step = b.step("lib", "Build the library");
+    lib_step.dependOn(&lib.step);
+
+    // Tests for library
+    const lib_tests = b.addTest(.{
+        .root_module = lib.root_module,
+    });
+    const run_lib_tests = b.addRunArtifact(lib_tests);
+    test_step.dependOn(&run_lib_tests.step);
 }
