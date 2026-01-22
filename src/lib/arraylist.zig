@@ -54,12 +54,18 @@ pub fn ArrayList(comptime T: type) type {
             return;
         }
 
+        fn calculateNewCapacity(self: Self) usize {
+            // Derive the new capacity of the internal array
+            // Multiple the current capacity by the scale factor and take the integer ceiling
+            return if (self.capacity == 0) 5
+                    else @intFromFloat(@ceil(@as(f32, @floatFromInt(self.capacity)) * self.scale_factor));
+        }
+
         fn grow(self: *Self) !void {
             // Derive the new capacity of the internal array
             // Multiple the current capacity by the scale factor and take the integer ceiling
             std.debug.print("curr_capacity: {d}\t", .{self.capacity});
-            const new_capacity = if (self.capacity == 0) 5
-            else @as(usize, @intFromFloat(@ceil(@as(f32, @floatFromInt(self.capacity)) * self.scale_factor)));
+            const new_capacity = self.calculateNewCapacity();
             std.debug.print("new_capacity: {d}\n", .{new_capacity});
 
             // Allocating an internal array of `capacity` size
@@ -135,6 +141,24 @@ pub fn ArrayList(comptime T: type) type {
             }
          };
     };
+}
+
+test "calculateNewCapacity" {
+    // No capacity
+    const list1 = ArrayList(i32).init(std.testing.allocator, .{});
+    try std.testing.expectEqual(5, list1.calculateNewCapacity());
+
+    // Small capacity, default scale factor
+    const list2 = ArrayList(i32).init(std.testing.allocator, .{.initial_capacity = 1});
+    try std.testing.expectEqual(2, list2.calculateNewCapacity());
+
+    // Small capacity, large scale factor
+    const list3 = ArrayList(i32).init(std.testing.allocator, .{.initial_capacity = 2, .scale_factor = 12.0});
+    try std.testing.expectEqual(24, list3.calculateNewCapacity());
+
+    // Large capacity, default scale factor
+    const list4 = ArrayList(i32).init(std.testing.allocator, .{.initial_capacity = 100});
+    try std.testing.expectEqual(150, list4.calculateNewCapacity());
 }
 
 test "empty i32" {
