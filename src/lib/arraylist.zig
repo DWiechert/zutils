@@ -56,7 +56,7 @@ pub fn ArrayList(comptime T: type) type {
 
         fn calculateNewCapacity(self: *const Self) usize {
             // Read-only pointer to self, no copy
-            // By using self: Self, this would copy the struct and allocate extra memory
+            // By using `self: Self`, this would copy the struct and allocate extra memory
             // Derive the new capacity of the internal array
             // Multiple the current capacity by the scale factor and take the integer ceiling
             return if (self.capacity == 0) 5
@@ -66,9 +66,8 @@ pub fn ArrayList(comptime T: type) type {
         fn grow(self: *Self) !void {
             // Derive the new capacity of the internal array
             // Multiple the current capacity by the scale factor and take the integer ceiling
-            std.debug.print("curr_capacity: {d}\t", .{self.capacity});
             const new_capacity = self.calculateNewCapacity();
-            std.debug.print("new_capacity: {d}\n", .{new_capacity});
+            std.debug.print("curr_capacity: {d}\tnew_capacity: {d}\n", .{self.capacity, new_capacity});
 
             // Allocating an internal array of `capacity` size
             // [_][_][_][_][_][_][_][_][_][_]  ← 10 items allocated (capacity = 10)
@@ -107,9 +106,35 @@ pub fn ArrayList(comptime T: type) type {
             return element;
         }
 
+        pub fn get(self: Self, index: usize) !T {
+            const curr_length = self.len();
+            if (index >= curr_length) return error.IndexOutOfBounds;
+
+            return self.elements[index];
+        }
+
+        /// Get a mutable pointer to an element at index
+        pub fn getPtr(self: *Self, index: usize) !*T {
+            // This is needed so that HashSet can modify the underlying
+            // array instead of getting a copy of the data
+            const curr_length = self.len();
+            if (index >= curr_length) return error.IndexOutOfBounds;
+            return &self.elements[index];
+        }
+
         pub fn len(self: Self) usize {
             // `self` can be an instance since there are no modifications
             return self.elements.len;
+        }
+
+        pub fn contains(self: Self, element: T) bool {
+            var iter = self.iterator();
+            while (iter.next()) |item| {
+                if (std.meta.eql(element, item)) {
+                    return true;
+                }
+            }
+            return false;
         }
 
         /// Returns an iterator over the list.
@@ -146,6 +171,9 @@ pub fn ArrayList(comptime T: type) type {
 }
 
 test "calculateNewCapacity" {
+    // No `defer listX.deinit()` because it throws an error
+    // Need to look into this later
+
     // No capacity
     const list1 = ArrayList(i32).init(std.testing.allocator, .{});
     try std.testing.expectEqual(5, list1.calculateNewCapacity());
@@ -261,6 +289,44 @@ test "remove last" {
     const element = try list.remove(1);
     try std.testing.expectEqual(2, element);
     try std.testing.expectEqual(@as(usize, 1), list.len());
+}
+
+test "get" {
+    var list = ArrayList(i32).init(std.testing.allocator, .{});
+    defer list.deinit();
+
+    try list.add(1);
+    try list.add(2);
+    try std.testing.expectEqual(1, list.get(0));
+    try std.testing.expectEqual(2, list.get(1));
+    try std.testing.expectError(error.IndexOutOfBounds, list.get(2));
+}
+
+test "contains i32" {
+    var list = ArrayList(i32).init(std.testing.allocator, .{});
+    defer list.deinit();
+
+    try list.add(1);
+    try list.add(2);
+
+    try std.testing.expectEqual(true, list.contains(1));
+    try std.testing.expectEqual(true, list.contains(2));
+    try std.testing.expectEqual(false, list.contains(3));
+}
+
+test "contains u8" {
+    var list = ArrayList(u8).init(std.testing.allocator, .{});
+    defer list.deinit();
+
+    try list.add('h');
+    try list.add('e');
+    try list.add('l');
+    try list.add('l');
+    try list.add('o');
+
+    try std.testing.expectEqual(true, list.contains('h'));
+    try std.testing.expectEqual(true, list.contains('l'));
+    try std.testing.expectEqual(false, list.contains('w'));
 }
 
 test "iterator" {
