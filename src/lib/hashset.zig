@@ -70,6 +70,27 @@ pub fn HashSet(comptime T: type) type {
             return bucket;
         }
 
+        pub fn remove(self: *Self, element: T) !bool {
+            const bucket_index = self.getBucket(element);
+            const bucket = try self.buckets.getPtr(bucket_index);
+
+            // Find element in the hash bucket
+            var iter = bucket.iterator();
+            var index: usize = 0;
+            while (iter.next()) |item| {
+                if (std.meta.eql(element, item)) {
+                    // Remove from bucket
+                    _ = try bucket.remove(index);
+                    self.size -= 1;
+                    return true;
+                }
+                index += 1;
+            }
+
+            // Not found
+            return false;
+        }
+
         pub fn len(self: Self) usize {
             return self.size;
         }
@@ -186,6 +207,20 @@ test "add u8" {
     try set.add('l'); // Duplicate, should not increase length
     try set.add('d');
     try std.testing.expectEqual(@as(usize, 8), set.len());
+}
+
+test "remove" {
+    var set = try HashSet(u8).init(std.testing.allocator, .{});
+    defer set.deinit();
+
+    try std.testing.expectEqual(@as(usize, 0), set.len());
+    try set.add(1);
+    try set.add(2);
+    try std.testing.expectEqual(@as(usize, 2), set.len());
+    try std.testing.expectEqual(true, set.remove(1));
+    try std.testing.expectEqual(@as(usize, 1), set.len());
+    try std.testing.expectEqual(false, set.remove(1)); // Remove again, fail
+    try std.testing.expectEqual(@as(usize, 1), set.len());
 }
 
 test "contains i32" {
