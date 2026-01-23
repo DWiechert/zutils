@@ -67,6 +67,7 @@ pub fn ArrayList(comptime T: type) type {
             // Derive the new capacity of the internal array
             // Multiple the current capacity by the scale factor and take the integer ceiling
             const new_capacity = self.calculateNewCapacity();
+            std.debug.print("curr_capacity: {d}\tnew_capacity: {d}\n", .{self.capacity, new_capacity});
 
             // Allocating an internal array of `capacity` size
             // [_][_][_][_][_][_][_][_][_][_]  ← 10 items allocated (capacity = 10)
@@ -110,6 +111,15 @@ pub fn ArrayList(comptime T: type) type {
             if (index >= curr_length) return error.IndexOutOfBounds;
 
             return self.elements[index];
+        }
+
+        /// Get a mutable pointer to an element at index
+        pub fn getPtr(self: *Self, index: usize) !*T {
+            // This is needed so that HashSet can modify the underlying
+            // array instead of getting a copy of the data
+            const curr_length = self.len();
+            if (index >= curr_length) return error.IndexOutOfBounds;
+            return &self.elements[index];
         }
 
         pub fn len(self: Self) usize {
@@ -161,6 +171,9 @@ pub fn ArrayList(comptime T: type) type {
 }
 
 test "calculateNewCapacity" {
+    // No `defer listX.deinit()` because it throws an error
+    // Need to look into this later
+
     // No capacity
     const list1 = ArrayList(i32).init(std.testing.allocator, .{});
     try std.testing.expectEqual(5, list1.calculateNewCapacity());
