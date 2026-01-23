@@ -105,7 +105,7 @@ pub fn ArrayList(comptime T: type) type {
             return element;
         }
 
-        pub fn get(self: *const Self, index: usize) !T {
+        pub fn get(self: Self, index: usize) !T {
             const curr_length = self.len();
             if (index >= curr_length) return error.IndexOutOfBounds;
 
@@ -119,8 +119,8 @@ pub fn ArrayList(comptime T: type) type {
 
         pub fn contains(self: Self, element: T) bool {
             var iter = self.iterator();
-            while (iter.next()) |i| {
-                if (std.meta.eql(element, i)) {
+            while (iter.next()) |item| {
+                if (std.meta.eql(element, item)) {
                     return true;
                 }
             }
