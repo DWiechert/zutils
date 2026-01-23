@@ -56,7 +56,7 @@ pub fn ArrayList(comptime T: type) type {
 
         fn calculateNewCapacity(self: *const Self) usize {
             // Read-only pointer to self, no copy
-            // By using self: Self, this would copy the struct and allocate extra memory
+            // By using `self: Self`, this would copy the struct and allocate extra memory
             // Derive the new capacity of the internal array
             // Multiple the current capacity by the scale factor and take the integer ceiling
             return if (self.capacity == 0) 5
