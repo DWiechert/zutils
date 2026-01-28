@@ -87,5 +87,5 @@ test "benchmark simple loop" {
     try bench.run("empty", 10000, benchEmpty);
     try bench.run("simple loop", 10000, benchSimpleLoop);
 
-    bench.report();  // Prints summary
+    bench.report();
 }
