@@ -10,7 +10,7 @@ jobs:
             os: [ubuntu-latest, windows-latest, macos-latest]
             zig_version: [0.15.1, 0.15.2]
     runs-on: ${{ matrix.os }}
-    name: Build and Test
+    name: Build
     steps:
       - uses: actions/checkout@v5
       - uses: mlugg/setup-zig@v2
