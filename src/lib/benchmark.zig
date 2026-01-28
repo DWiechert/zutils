@@ -1,32 +1,18 @@
 const std = @import("std");
 
-const Result = struct {
+const BenchmarkResult = struct {
     const Self = @This();
 
-    success: bool,
-    iteration: usize,
-    nsec: usize = 0,
+    iterations: usize,
+    total_ns: u64,
+    avg_ns: u64,
+    min_ns: u64,
+    max_ns: u64,
+    name: []const u8,
 
     pub fn format(self: Self, writer: *std.io.Writer) !void {
-        try writer.print("Iteration: {d}\tNSec: {d}\tSuccess: {}", .{self.iteration, self.nsec, self.success});
-    }
-};
-
-const Results = struct {
-    const Self = @This();
-
-    name: [] const u8,
-    results: std.ArrayList(Result),
-
-    pub fn deinit(self: *Self, allocator: std.mem.Allocator) void {
-        self.results.deinit(allocator);
-    }
-
-    pub fn format(self: Self, writer: *std.io.Writer) !void {
-        try writer.print("Benchmark {s}\n", .{self.name});
-        for (self.results.items) |result| {
-            try writer.print("\t{f}\n", .{result});
-        }
+        try writer.print("Benchmark: {s}\n\tIterations: {d}\tAvg ns: {d}\tTotal ns: {d}\tMin: {d}\tMax: {d}",
+                         .{self.name, self.iterations, self.avg_ns, self.total_ns, self.min_ns, self.max_ns});
     }
 };
 
@@ -34,38 +20,51 @@ pub const Benchmark = struct {
     const Self = @This();
 
     allocator: std.mem.Allocator,
-    timer: std.time.Timer,
+    results: std.ArrayList(BenchmarkResult),
 
     pub fn init(allocator: std.mem.Allocator) !Self {
         return Self {
             .allocator = allocator,
-            .timer = try std.time.Timer.start(),
+            .results = .empty,
         };
     }
 
-    pub fn run(self: *Self, name: [] const u8, iterations: usize, func: *const fn() void) !Results {
-        std.debug.print("Running benchmark: {s}\n", .{name});
+    pub fn deinit(self: *Self) void {
+        self.results.deinit(self.allocator);
+    }
 
-        var results = Results {
-            .name = name,
-            .results = .empty,
-        };
+    pub fn run(self: *Self, name: [] const u8, iterations: usize, func: *const fn() void) !void {
+        var timer = try std.time.Timer.start();
+        var min_ms: u64 = std.math.maxInt(u64);
+        var max_ns: u64 = 0;
+        var total_ns: u64 = 0;
 
-        for (0..iterations) |iteration| {
-            self.timer.reset();
-            //const s = if (func()) true else |_| false;
+        for (0..iterations) |_| {
+            timer.reset();
             func();
-            const nsec = self.timer.read();
+            const elapsed = timer.read();
 
-            const result = Result{
-                .success = true,
-                .iteration = (iteration + 1),
-                .nsec = nsec,
-            };
-            try results.results.append(self.allocator, result);
+            total_ns += elapsed;
+            min_ms = @min(min_ms, elapsed);
+            max_ns = @max(max_ns, elapsed);
         }
 
-        return results;
+        const result = BenchmarkResult {
+            .name = name,
+            .iterations = iterations,
+            .total_ns = total_ns,
+            .max_ns = max_ns,
+            .min_ns = min_ms,
+            .avg_ns = (total_ns / iterations),
+        };
+        try self.results.append(self.allocator, result);
+    }
+
+    pub fn report(self: *const Self) void {
+        std.debug.print("\n=== Benchmark Report ===\n", .{});
+        for (self.results.items) |result| {
+            std.debug.print("{f}\n", .{result});
+        }
     }
 };
 
@@ -80,26 +79,13 @@ fn benchSimpleLoop() void {
     }
 }
 
-test "benchmark empty" {
-    var benchmark = try Benchmark.init(std.testing.allocator);
-
-    const name = "min";
-    const func = benchEmpty;
-    const iterations = 5;
-    var results = try benchmark.run(name, iterations, func);
-    defer results.deinit(std.testing.allocator);
-
-    std.debug.print("Results:\n{f}", .{results});
-}
 
 test "benchmark simple loop" {
-    var benchmark = try Benchmark.init(std.testing.allocator);
+    var bench = try Benchmark.init(std.testing.allocator);
+    defer bench.deinit();
 
-    const name = "min";
-    const func = benchSimpleLoop;
-    const iterations = 5;
-    var results = try benchmark.run(name, iterations, func);
-    defer results.deinit(std.testing.allocator);
+    try bench.run("empty", 10000, benchEmpty);
+    try bench.run("simple loop", 10000, benchSimpleLoop);
 
-    std.debug.print("Results:\n{f}", .{results});
+    bench.report();  // Prints summary
 }
