@@ -1,0 +1,4 @@
+# Set default behavior to always use line feed endings, even on Windows
+# This is needed to ensure the test files are read properly for assertions
+# https://docs.github.com/en/get-started/git-basics/configuring-git-to-handle-line-endings
+* text eol=lf
