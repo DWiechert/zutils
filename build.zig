@@ -77,7 +77,7 @@ pub fn build(b: *std.Build) void {
         });
         b.installArtifact(lib);
 
-        // Build library via `zig build lib` so no need to build executables always
+        // Build library via `zig build <nested library>` so no need to build executables always
         const lib_step = b.step(nestedLibrary, b.fmt("Build the library - {s}", .{nestedLibrary}));
         lib_step.dependOn(&lib.step);
 
