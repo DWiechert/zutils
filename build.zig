@@ -60,25 +60,32 @@ pub fn build(b: *std.Build) void {
         test_step.dependOn(&run_exe_tests.step);
     }
 
-    // Build library functions
-    const lib = b.addLibrary(.{
-        .name = "zutils-lib",
-        .root_module = b.createModule(.{
-            .root_source_file = b.path("src/lib.zig"),
-                                      .target = target,
-                                      .optimize = optimize,
-        }),
-    });
-    b.installArtifact(lib);
+    // Build nested libraries
+    const nestedLibraries = [_][] const u8 {
+        "lib",
+        "url",
+    };
 
-    // Build library via `zig build lib` so no need to build executables always
-    const lib_step = b.step("lib", "Build the library");
-    lib_step.dependOn(&lib.step);
+    for (nestedLibraries) |nestedLibrary| {
+        const lib = b.addLibrary(.{
+            .name = b.fmt("zutils-{s}", .{nestedLibrary}),
+            .root_module = b.createModule(.{
+                .root_source_file = b.path(b.fmt("src/{s}.zig", .{nestedLibrary})),
+                                        .target = target,
+                                        .optimize = optimize,
+            }),
+        });
+        b.installArtifact(lib);
 
-    // Tests for library
-    const lib_tests = b.addTest(.{
-        .root_module = lib.root_module,
-    });
-    const run_lib_tests = b.addRunArtifact(lib_tests);
-    test_step.dependOn(&run_lib_tests.step);
+        // Build library via `zig build <nested library>` so no need to build executables always
+        const lib_step = b.step(nestedLibrary, b.fmt("Build the library - {s}", .{nestedLibrary}));
+        lib_step.dependOn(&lib.step);
+
+        // Tests for library
+        const lib_tests = b.addTest(.{
+            .root_module = lib.root_module,
+        });
+        const run_lib_tests = b.addRunArtifact(lib_tests);
+        test_step.dependOn(&run_lib_tests.step);
+    }
 }
