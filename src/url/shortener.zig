@@ -1,70 +1,89 @@
 const std = @import("std");
 
+pub const Shortener = struct {
+    const Self = @This();
 
-const expect = std.testing.expect;
-const test_allocator = std.testing.allocator;
-const eql = std.mem.eql;
-const Place = struct { lat: f32, long: f32 };
+    allocator: std.mem.Allocator,
+    urls: std.StringHashMap([]const u8),
 
-test "hashmap stringify" {
-    var map: std.StringHashMap([]const u8) = .init(test_allocator);
-    defer map.deinit();
+    pub fn init(allocator: std.mem.Allocator) Self {
+        return Self {
+            .allocator = allocator,
+            .urls = .init(allocator),
+        };
+    }
 
-    try map.put("hello", "world");
-    try map.put("foo", "bar");
-    try map.put("baz", "boo");
+    pub fn deinit(self: *Self) void {
+        var iter = self.urls.keyIterator();
+        while (iter.next()) |key| {
+            // Free the duplicated short code from `add`
+            self.allocator.free(key.*);
+        }
+        self.urls.deinit();
+    }
 
-    try std.testing.expectEqual(3, map.count());
+    pub fn add(self: *Self, url: []const u8) ![]u8 {
+        // Generate hash code of the URL
+        var hasher = std.hash.Wyhash.init(0);
+        hasher.update(url);
+        const hash = hasher.final();
 
-    var string: std.io.Writer.Allocating = .init(test_allocator);
-    defer string.deinit();
+        // Convert hash code to string
+        var buf: [16]u8 = undefined;
+        const code = try std.fmt.bufPrint(&buf, "{x}", .{hash});
 
-    try string.writer.print("{f}", .{std.json.fmt(map, .{.whitespace = .indent_2})});
-    std.debug.print("{s}", .{string.written()});
+        // Copy code out of buffer so no dangling pointer when function returns
+        const code_copy = try self.allocator.dupe(u8, code);
+
+        try self.urls.put(code_copy, url);
+        return code_copy;
+    }
+
+    pub fn get(self: *const Self, short_code: []const u8) ?[]const u8 {
+        return self.urls.get(short_code);
+    }
+
+    pub fn findShortCode(self: *const Self, url: []const u8) ?[]const u8 {
+        var iter = self.urls.iterator();
+        while (iter.next()) |entry| {
+            if (std.mem.eql(u8, url, entry.value_ptr.*)) {
+                return entry.key_ptr.*;
+            }
+        }
+        return null;
+    }
+};
+
+test "add" {
+    var shortener = Shortener.init(std.testing.allocator);
+    defer shortener.deinit();
+
+    const code = try shortener.add("https://github.com/DWiechert");
+
+    try std.testing.expectEqual(1, shortener.urls.count());
+    try std.testing.expectEqualStrings("cc303afbc947d04e", code);
 }
 
-test "json parse" {
-    const parsed = try std.json.parseFromSlice(
-        Place,
-        test_allocator,
-        \\{ "lat": 40.684540, "long": -74.401422 }
-        ,
-        .{},
-    );
-    defer parsed.deinit();
+test "get" {
+    var shortener = Shortener.init(std.testing.allocator);
+    defer shortener.deinit();
 
-    const place = parsed.value;
+    const url = "https://github.com/DWiechert";
+    const code = try shortener.add(url);
 
-    try expect(place.lat == 40.684540);
-    try expect(place.long == -74.401422);
+    try std.testing.expectEqual(1, shortener.urls.count());
+    try std.testing.expectEqualStrings(url, shortener.get(code).?);
+    try std.testing.expectEqual(null, shortener.get("asdf"));
 }
 
-test "json stringify" {
-    const x: Place = .{
-        .lat = 51.997664,
-        .long = -0.740687,
-    };
+test "findShortCode" {
+    var shortener = Shortener.init(std.testing.allocator);
+    defer shortener.deinit();
 
-    var string: std.io.Writer.Allocating = .init(test_allocator);
-    defer string.deinit();
+    const url = "https://github.com/DWiechert";
+    const code = try shortener.add(url);
 
-    try string.writer.print("{f}", .{std.json.fmt(x, .{})});
-
-    try std.testing.expectEqualStrings(
-        \\{"lat":51.99766540527344,"long":-0.7406870126724243}
-        , string.written());
-}
-
-test "json parse with strings" {
-    const User = struct { name: []u8, age: u16 };
-
-    const parsed = try std.json.parseFromSlice(User, test_allocator,
-                                               \\{ "name": "Joe", "age": 25 }
-                                               , .{});
-    defer parsed.deinit();
-
-    const user = parsed.value;
-
-    try expect(eql(u8, user.name, "Joe"));
-    try expect(user.age == 25);
+    try std.testing.expectEqual(1, shortener.urls.count());
+    try std.testing.expectEqualStrings(code, shortener.findShortCode(url).?);
+    try std.testing.expectEqual(null, shortener.findShortCode(code));
 }
