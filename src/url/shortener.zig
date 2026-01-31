@@ -35,6 +35,8 @@ pub const Shortener = struct {
         // Copy code out of buffer so no dangling pointer when function returns
         const code_copy = try self.allocator.dupe(u8, code);
 
+        std.debug.print("url: {s}\tshort_code: {s}\n", .{url, code_copy});
+
         try self.urls.put(code_copy, url);
         return code_copy;
     }
