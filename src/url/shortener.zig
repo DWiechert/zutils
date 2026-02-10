@@ -25,7 +25,6 @@ pub const Shortener = struct {
         if (self.free_values) {
             var iter2 = self.urls.valueIterator();
             while (iter2.next()) |value| {
-                // Free the duplicated short code from `add`
                 self.allocator.free(value.*);
             }
         }
