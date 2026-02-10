@@ -5,11 +5,13 @@ pub const Shortener = struct {
 
     allocator: std.mem.Allocator,
     urls: std.StringHashMap([]const u8),
+    free_values: bool,
 
     pub fn init(allocator: std.mem.Allocator) Self {
         return Self {
             .allocator = allocator,
             .urls = .init(allocator),
+            .free_values = false,
         };
     }
 
@@ -19,6 +21,15 @@ pub const Shortener = struct {
             // Free the duplicated short code from `add`
             self.allocator.free(key.*);
         }
+
+        if (self.free_values) {
+            var iter2 = self.urls.valueIterator();
+            while (iter2.next()) |value| {
+                // Free the duplicated short code from `add`
+                self.allocator.free(value.*);
+            }
+        }
+
         self.urls.deinit();
     }
 
@@ -54,6 +65,46 @@ pub const Shortener = struct {
         }
         return null;
     }
+
+
+    pub fn write(self: *const Self, writer: anytype) !void {
+        // `writer` is `anytype` as Zig does not have interfaces like Java.
+        // Instead, whatever is passed as the `writer` is checked at compile
+        // time if it has the correct methods or not. If yes, it compiles,
+        // if not, it errors.
+
+        var iter = self.urls.iterator();
+        while (iter.next()) |entry| {
+            try writer.print("{s}={s}\n", .{entry.key_ptr.*, entry.value_ptr.*});
+        }
+    }
+
+    pub fn read(allocator: std.mem.Allocator, reader: anytype) !Self {
+        // `reader` is `anytype` as Zig does not have interfaces like Java.
+        // Instead, whatever is passed as the `reader` is checked at compile
+        // time if it has the correct methods or not. If yes, it compiles,
+        // if not, it errors.
+
+        var shortener = Self.init(allocator);
+        // Need to free values when reading from JSON as the values are duplicated
+        shortener.free_values = true;
+
+        var buffer: [1024]u8 = undefined;
+        while (try reader.readUntilDelimiterOrEof(&buffer, '\n')) |line| {
+            var parts = std.mem.splitScalar(u8, line, '=');
+            const code = parts.next() orelse continue;
+            const url = parts.next() orelse continue;
+
+            // Need to duplicate the values because `lin` points to the
+            // temporary buffer which gets overwritten on each record
+            const code_copy = try allocator.dupe(u8, code);
+            const url_copy = try allocator.dupe(u8, url);
+
+            try shortener.urls.put(code_copy, url_copy);
+        }
+
+        return shortener;
+    }
 };
 
 test "add" {
@@ -88,4 +139,39 @@ test "findShortCode" {
     try std.testing.expectEqual(1, shortener.urls.count());
     try std.testing.expectEqualStrings(code, shortener.findShortCode(url).?);
     try std.testing.expectEqual(null, shortener.findShortCode(code));
+}
+
+test "write" {
+    var shortener = Shortener.init(std.testing.allocator);
+    defer shortener.deinit();
+
+    _ = try shortener.add("https://github.com/DWiechert");
+    _ = try shortener.add("https://github.com/DWiechert/zutils");
+
+    var buf: std.ArrayList(u8) = .empty;
+    defer buf.deinit(std.testing.allocator);
+    try shortener.write(buf.writer(std.testing.allocator));
+
+    const expected =
+        \\cc303afbc947d04e=https://github.com/DWiechert
+        \\f261e152eb23b9e5=https://github.com/DWiechert/zutils
+        \\
+    ;
+    try std.testing.expectEqualStrings(expected, buf.items);
+}
+
+test "read" {
+    const input =
+        \\cc303afbc947d04e=https://github.com/DWiechert
+        \\f261e152eb23b9e5=https://github.com/DWiechert/zutils
+        \\
+    ;
+    var stream = std.io.fixedBufferStream(input);
+
+    var shortener = try Shortener.read(std.testing.allocator, stream.reader());
+    defer shortener.deinit();
+
+    try std.testing.expectEqual(2, shortener.urls.count());
+    try std.testing.expectEqualStrings("https://github.com/DWiechert", shortener.get("cc303afbc947d04e").?);
+    try std.testing.expectEqualStrings("https://github.com/DWiechert/zutils", shortener.get("f261e152eb23b9e5").?);
 }
