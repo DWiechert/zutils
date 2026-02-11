@@ -57,7 +57,7 @@ pub const Shortener = struct {
         return code_copy;
     }
 
-    pub fn get(self: *const Self, short_code: []const u8) ?URLEntry {
+    pub fn getByShortCode(self: *const Self, short_code: []const u8) ?URLEntry {
         for (self.entries.items) |entry| {
             if (std.mem.eql(u8, short_code, entry.short_code)) {
                 return entry;
@@ -67,7 +67,7 @@ pub const Shortener = struct {
         return null;
     }
 
-    pub fn findShortCode(self: *const Self, url: []const u8) ?URLEntry {
+    pub fn getByUrl(self: *const Self, url: []const u8) ?URLEntry {
         for (self.entries.items) |entry| {
             if (std.mem.eql(u8, url, entry.url)) {
                 return entry;
@@ -119,7 +119,7 @@ test "add" {
     try std.testing.expectEqualStrings("cc303afbc947d04e", code);
 }
 
-test "get" {
+test "getByShortCode" {
     var shortener = Shortener.init(std.testing.allocator);
     defer shortener.deinit();
 
@@ -127,14 +127,14 @@ test "get" {
     const code = try shortener.add(url);
 
     try std.testing.expectEqual(1, shortener.entries.items.len);
-    const entry = shortener.get(code).?;
+    const entry = shortener.getByShortCode(code).?;
     try std.testing.expectEqualStrings(url, entry.url);
     try std.testing.expectEqualStrings(code, entry.short_code);
     try std.testing.expectEqual(600, entry.ttl_sec);
-    try std.testing.expectEqual(null, shortener.get("asdf"));
+    try std.testing.expectEqual(null, shortener.getByShortCode("asdf"));
 }
 
-test "findShortCode" {
+test "getByUrl" {
     var shortener = Shortener.init(std.testing.allocator);
     defer shortener.deinit();
 
@@ -142,11 +142,11 @@ test "findShortCode" {
     const code = try shortener.add(url);
 
     try std.testing.expectEqual(1, shortener.entries.items.len);
-    const entry = shortener.findShortCode(url).?;
+    const entry = shortener.getByUrl(url).?;
     try std.testing.expectEqualStrings(url, entry.url);
     try std.testing.expectEqualStrings(code, entry.short_code);
     try std.testing.expectEqual(600, entry.ttl_sec);
-    try std.testing.expectEqual(null, shortener.findShortCode(code));
+    try std.testing.expectEqual(null, shortener.getByUrl(code));
 }
 
 test "write" {
@@ -200,12 +200,12 @@ test "read" {
     try std.testing.expectEqual(2, shortener.entries.items.len);
 
 
-    const entry1 = shortener.get("cc303afbc947d04e").?;
+    const entry1 = shortener.getByShortCode("cc303afbc947d04e").?;
     try std.testing.expectEqualStrings("https://github.com/DWiechert", entry1.url);
     try std.testing.expectEqualStrings("cc303afbc947d04e", entry1.short_code);
     try std.testing.expectEqual(600, entry1.ttl_sec);
 
-    const entry2 = shortener.get("f261e152eb23b9e5").?;
+    const entry2 = shortener.getByShortCode("f261e152eb23b9e5").?;
     try std.testing.expectEqualStrings("https://github.com/DWiechert/zutils", entry2.url);
     try std.testing.expectEqualStrings("f261e152eb23b9e5", entry2.short_code);
     try std.testing.expectEqual(600, entry2.ttl_sec);
